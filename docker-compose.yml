@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14
+    container_name: parking-garage-db
+    restart: always
+    environment:
+      POSTGRES_USER: parking_user
+      POSTGRES_PASSWORD: parking_password
+      POSTGRES_DB: parking_garage
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U parking_user -d parking_garage"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Node.js backend
+  node-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+    container_name: parking-garage-node
+    restart: always
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_URL=postgres://parking_user:parking_password@postgres:5432/parking_garage
+      - NODE_ENV=development
+      - PORT=5000
+    volumes:
+      - ./:/app
+      - /app/node_modules
+
+  # Python backend
+  python-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    container_name: parking-garage-python
+    restart: always
+    ports:
+      - "5001:5001"
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_URL=postgresql://parking_user:parking_password@postgres:5432/parking_garage
+      - PORT=5001
+    volumes:
+      - ./:/app
+
+volumes:
+  postgres_data:
