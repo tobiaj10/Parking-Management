@@ -4,13 +4,14 @@ This document outlines the migration process from the TypeScript backend to the 
 
 ## Migration Status
 
-The migration of the backend from TypeScript (Node.js) to Python (Flask) is in progress. Both versions can currently be run simultaneously for testing and comparison.
+The migration of the backend from TypeScript (Node.js) to Python (FastAPI) is in progress. Both versions can currently be run simultaneously for testing and comparison.
 
 ### Completed Tasks
 
-- ✅ Created Python server structure (models.py, database.py, app.py, run.py)
+- ✅ Created Python server structure (models.py, schemas.py, database.py, app.py, run.py)
 - ✅ Installed all required Python dependencies
 - ✅ Implemented database models and connections
+- ✅ Created Pydantic schemas for API validation and documentation
 - ✅ Created API endpoints for all core functionality
   - Status check
   - Garage statistics
@@ -19,6 +20,7 @@ The migration of the backend from TypeScript (Node.js) to Python (Flask) is in p
   - Activity listing
 - ✅ Added test scripts for validation
 - ✅ Configured Python server to run on port 5001 (avoiding conflict with Node.js server on port 5000)
+- ✅ Implemented automatic API documentation with Swagger UI and ReDoc
 
 ### Testing
 
@@ -26,21 +28,19 @@ The migration includes test scripts to validate API functionality:
 
 ```bash
 # Test Node.js server (running on port 5000)
-./python_server/test_server.sh
-
-# Test Python server (running on port 5001)
-./python_server/test_server.sh python
-```
-
-Or directly:
-
-```bash
-# Test Node.js server
 API_PORT=5000 python python_server/test.py
 
-# Test Python server
+# Test Python server (running on port 5001)
 API_PORT=5001 python python_server/test.py
 ```
+
+### API Documentation
+
+One major advantage of the FastAPI backend is automatic API documentation:
+
+- **Swagger UI**: Available at `http://localhost:5001/docs`
+- **ReDoc**: Available at `http://localhost:5001/redoc`
+- **OpenAPI Schema**: Available at `http://localhost:5001/openapi.json`
 
 ### Running the Servers
 
@@ -73,6 +73,17 @@ The migration is being performed with a phased approach:
 2. **Functional Parity**: Ensuring the Python backend matches all Node.js functionality
 3. **Incremental Testing**: Testing each component as it's migrated
 4. **Switchover**: Moving the frontend to the new backend once it's fully validated
+
+## Advantages of FastAPI over Flask
+
+The decision to use FastAPI instead of Flask offers several benefits:
+
+1. **Automatic documentation** - Interactive API documentation with Swagger UI
+2. **Type safety** - Pydantic models provide runtime type checking
+3. **Input validation** - Automatic request validation with clear error messages
+4. **Better performance** - FastAPI is one of the fastest Python web frameworks
+5. **Native async support** - Asynchronous request handling for better performance
+6. **Modern Python features** - Takes advantage of Python 3.6+ features
 
 ## Database
 

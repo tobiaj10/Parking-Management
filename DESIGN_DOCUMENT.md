@@ -13,7 +13,7 @@ The Parking Garage Management System is a web application designed to manage par
 ```
 ┌─────────────────┐     HTTP      ┌─────────────────┐     SQL      ┌─────────────────┐
 │                 │   Requests    │                 │    Queries   │                 │
-│  React Frontend │ ◄───────────► │  Flask Backend  │ ◄───────────►│   PostgreSQL    │
+│  React Frontend │ ◄───────────► │ FastAPI Backend │ ◄───────────►│   PostgreSQL    │
 │    (Browser)    │               │    (Python)     │              │    Database     │
 │                 │               │                 │              │                 │
 └─────────────────┘               └─────────────────┘              └─────────────────┘
@@ -21,71 +21,85 @@ The Parking Garage Management System is a web application designed to manage par
 
 The system follows a standard three-tier architecture:
 1. **Presentation Layer**: React frontend with UI components
-2. **Application Layer**: Flask backend implementing business logic and API endpoints
+2. **Application Layer**: FastAPI backend implementing business logic and API endpoints
 3. **Data Layer**: PostgreSQL database for persistent storage
 
 ## 2. Python Backend Implementation
 
 ### 2.1 Core Components
 
-The Python backend consists of four main components:
+The Python backend consists of five main components:
 
-1. **app.py**: Main application file with Flask routes and business logic
+1. **app.py**: Main application file with FastAPI routes and business logic
 2. **models.py**: Database models using SQLAlchemy ORM
-3. **database.py**: Database connection setup and session management
-4. **run.py**: Application entry point and server configuration
+3. **schemas.py**: Pydantic models for request/response validation and documentation
+4. **database.py**: Database connection setup and session management
+5. **run.py**: Application entry point and server configuration
 
 ### 2.2 Component Relationships
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│ run.py                                                              │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │ app.py                                                       │   │
-│  │  ┌────────────────────────┐      ┌─────────────────────┐    │   │
-│  │  │ API Endpoints/Routes   │ ──► │ Business Logic      │    │   │
-│  │  └────────────────────────┘      └─────────────────────┘    │   │
-│  │               │                            │                 │   │
-│  └───────────────┼────────────────────────────┼─────────────────┘   │
-│                  ▼                            ▼                      │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │ models.py                                                    │   │
-│  │  ┌────────────────────────┐      ┌─────────────────────┐    │   │
-│  │  │ SQLAlchemy Models      │ ◄──► │ Data Serialization │    │   │
-│  │  └────────────────────────┘      └─────────────────────┘    │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-│                              │                                       │
-└──────────────────────────────┼───────────────────────────────────────┘
-                               ▼                                     
-  ┌──────────────────────────────────────────────────────────────┐     
-  │ database.py                                                  │     
-  │  ┌────────────────────────┐      ┌─────────────────────┐    │     
-  │  │ DB Connection          │ ◄──► │ Session Management │    │     
-  │  └────────────────────────┘      └─────────────────────┘    │     
-  └──────────────────────────────────────────────────────────────┘     
+┌───────────────────────────────────────────────────────────────────────────┐
+│ run.py                                                                    │
+│  ┌──────────────────────────────────────────────────────────────────┐     │
+│  │ app.py                                                           │     │
+│  │  ┌────────────────────────┐      ┌─────────────────────┐        │     │
+│  │  │ API Endpoints/Routes   │ ──► │ Business Logic      │        │     │
+│  │  └────────────────────────┘      └─────────────────────┘        │     │
+│  │               │                            │                     │     │
+│  └───────────────┼────────────────────────────┼─────────────────────┘     │
+│                  ▼                            ▼                            │
+│  ┌──────────────────────────────────────────────────────────────────┐     │
+│  │ schemas.py                                                       │     │
+│  │  ┌────────────────────────┐      ┌─────────────────────┐        │     │
+│  │  │ Pydantic Models        │ ◄──► │ Data Validation    │        │     │
+│  │  └────────────────────────┘      └─────────────────────┘        │     │
+│  └──────────────────────────────────────────────────────────────────┘     │
+│                  │                            │                            │
+│                  ▼                            ▼                            │
+│  ┌──────────────────────────────────────────────────────────────────┐     │
+│  │ models.py                                                        │     │
+│  │  ┌────────────────────────┐      ┌─────────────────────┐        │     │
+│  │  │ SQLAlchemy Models      │ ◄──► │ Data Persistence   │        │     │
+│  │  └────────────────────────┘      └─────────────────────┘        │     │
+│  └──────────────────────────────────────────────────────────────────┘     │
+│                               │                                            │
+└───────────────────────────────┼────────────────────────────────────────────┘
+                                ▼                                     
+  ┌──────────────────────────────────────────────────────────────────┐     
+  │ database.py                                                      │     
+  │  ┌────────────────────────┐      ┌─────────────────────┐        │     
+  │  │ DB Connection          │ ◄──► │ Session Management │        │     
+  │  └────────────────────────┘      └─────────────────────┘        │     
+  └──────────────────────────────────────────────────────────────────┘     
 ```
 
 ### 2.3 Detailed Component Descriptions
 
 #### 2.3.1 app.py
 
-This is the core application file containing the Flask application instance, API routes, and business logic.
+This is the core application file containing the FastAPI application instance, API routes, and business logic.
 
 **Key Functions:**
 
-1. **initialize_garage_settings()** (Lines 22-30):
+1. **initialize_garage_settings()** (Lines 44-53):
    - Creates default garage settings if none exist
    - Sets up 140 total spaces and $10/hour rate
    - Called on application initialization
 
-2. **serve()** (Lines 37-41):
-   - Serves static frontend assets
-   - Falls back to index.html for SPA routing
+2. **http_exception_handler()** (Lines 59-64):
+   - Custom exception handler for HTTP errors
+   - Returns standardized JSON error responses
 
-3. **status()** (Lines 44-46):
+3. **validation_exception_handler()** (Lines 66-71):
+   - Custom handler for request validation errors
+   - Returns detailed validation error messages
+
+4. **status()** (Lines 80-82):
    - Simple health check endpoint
+   - Returns standardized status response
 
-4. **get_garage_stats()** (Lines 49-96):
+5. **get_garage_stats()** (Lines 84-133):
    - Returns garage statistics including:
      - Total/occupied/available spaces
      - Occupancy percentages
@@ -93,42 +107,95 @@ This is the core application file containing the Flask application instance, API
      - Vehicles processed today
      - Average stay time
    - Performs calculations based on ticket data
+   - Returns typed response with GarageStatsResponse model
 
-5. **create_ticket()** (Lines 99-126):
+6. **create_ticket()** (Lines 135-157):
    - Creates a new parking ticket
+   - Validates input with TicketCreate schema
    - Generates unique ticket number
-   - Validates input data
-   - Stores entry time and vehicle information
+   - Returns typed response with TicketResponse model
 
-6. **get_ticket()** (Lines 129-140):
+7. **get_ticket()** (Lines 159-172):
    - Retrieves ticket information by ticket number
-   - Returns 404 if ticket not found
+   - Returns 404 HTTPException if ticket not found
+   - Returns typed response with TicketResponse model
 
-7. **process_exit()** (Lines 143-189):
+8. **process_exit()** (Lines 174-216):
    - Processes vehicle exit
+   - Validates input with ExitRequest schema
    - Validates ticket exists and is active
    - Calculates duration and payment amount
    - Updates ticket with exit information
-   - Returns completed ticket data
+   - Returns typed response with TicketResponse model
 
-8. **get_activities()** (Lines 192-216):
+9. **get_activities()** (Lines 218-241):
    - Returns recent parking activities
    - Optional limit parameter (default 10)
-   - Formats data for frontend consumption
+   - Returns typed response with list of ActivityResponse models
+
+10. **serve_frontend()** (Lines 244-259):
+    - Serves static frontend assets
+    - Handles SPA routing by returning index.html for client routes
+    - Uses FileResponse for efficient file serving
+
+11. **db_session_middleware()** (Lines 262-269):
+    - Middleware for cleaning up database sessions
+    - Ensures proper resource management with session cleanup
 
 **Routes:**
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Serves frontend static files |
-| `/api/status` | GET | Health check endpoint |
-| `/api/garage/stats` | GET | Retrieves garage statistics |
-| `/api/tickets` | POST | Creates a new parking ticket |
-| `/api/tickets/<ticket_number>` | GET | Gets ticket by number |
-| `/api/tickets/<ticket_number>/exit` | PUT | Processes vehicle exit |
-| `/api/activities` | GET | Lists recent parking activities |
+| Endpoint | Method | Description | Response Model |
+|----------|--------|-------------|----------------|
+| `/api/status` | GET | Health check endpoint | StatusResponse |
+| `/api/garage/stats` | GET | Retrieves garage statistics | GarageStatsResponse |
+| `/api/tickets` | POST | Creates a new parking ticket | TicketResponse |
+| `/api/tickets/{ticket_number}` | GET | Gets ticket by number | TicketResponse |
+| `/api/tickets/{ticket_number}/exit` | PUT | Processes vehicle exit | TicketResponse |
+| `/api/activities` | GET | Lists recent parking activities | List[ActivityResponse] |
+| `/{full_path:path}` | GET | Serves frontend static files | FileResponse |
 
-#### 2.3.2 models.py
+#### 2.3.2 schemas.py
+
+Defines Pydantic models used for request/response validation and API documentation.
+
+**Models:**
+
+1. **TicketCreate** (Lines 4-6):
+   - Request model for creating tickets
+   - Fields: licensePlate, vehicleType
+   - Used for validating POST requests to /api/tickets
+
+2. **TicketResponse** (Lines 8-18):
+   - Response model for ticket operations
+   - Fields: id, ticketNumber, licensePlate, vehicleType, entryTime, exitTime, durationMinutes, amountPaid, status, paymentMethod
+   - Used for standardizing ticket-related API responses
+
+3. **ExitRequest** (Lines 20-21):
+   - Request model for exit processing
+   - Fields: paymentMethod
+   - Used for validating PUT requests to /api/tickets/{ticket_number}/exit
+
+4. **ActivityResponse** (Lines 23-31):
+   - Response model for activity list
+   - Fields: id, ticketNumber, licensePlate, entryTime, exitTime, durationMinutes, amount, status
+   - Used for standardizing activity-related API responses
+
+5. **GarageStatsResponse** (Lines 33-41):
+   - Response model for garage statistics
+   - Fields: totalSpaces, occupiedSpaces, availableSpaces, occupiedSpacesPercentage, availableSpacesPercentage, hourlyRate, todaysRevenue, vehiclesProcessedToday, averageStayTime
+   - Used for standardizing garage stats API response
+
+6. **StatusResponse** (Lines 43-44):
+   - Simple status response model
+   - Field: status (default "ok")
+   - Used for health check endpoint
+
+7. **ErrorResponse** (Lines 46-47):
+   - Error response model
+   - Field: message
+   - Used for standardizing error responses
+
+#### 2.3.3 models.py
 
 Defines SQLAlchemy database models representing the application's data structures.
 
@@ -162,7 +229,7 @@ Defines SQLAlchemy database models representing the application's data structure
      - hourly_rate: Rate in cents per hour
    - Method: to_dict() for serialization
 
-#### 2.3.3 database.py
+#### 2.3.4 database.py
 
 Handles database connection setup and session management.
 
@@ -184,7 +251,7 @@ Handles database connection setup and session management.
    - Removes session at the end of requests
    - Prevents resource leaks
 
-#### 2.3.4 run.py
+#### 2.3.5 run.py
 
 Application entry point and server configuration.
 
@@ -193,7 +260,8 @@ Application entry point and server configuration.
 1. **Server Configuration** (Lines 4-7):
    - Sets host to 0.0.0.0 (accessible from any IP)
    - Sets port to 5001 (avoiding conflict with TypeScript server on 5000)
-   - Enables debug mode for development
+   - Enables reload mode for development
+   - Uses uvicorn ASGI server for running the application
 
 ## 3. Database Schema
 
@@ -232,49 +300,79 @@ The API follows RESTful principles with these main endpoints:
 
 #### GET /api/status
 - **Purpose**: Health check endpoint
+- **Response Model**: StatusResponse
 - **Response**: `{ "status": "ok" }`
 - **Usage**: Used by monitoring systems and tests to verify the API is operational
 
 #### GET /api/garage/stats
 - **Purpose**: Retrieve garage statistics
+- **Response Model**: GarageStatsResponse
 - **Response**: Complex JSON object with garage metrics
 - **Usage**: Dashboard display on frontend
 
 #### POST /api/tickets
 - **Purpose**: Create a new ticket when vehicle enters
+- **Request Model**: TicketCreate
 - **Request Body**: `{ "licensePlate": "ABC123", "vehicleType": "Car" }`
+- **Response Model**: TicketResponse
 - **Response**: Complete ticket object
 - **Usage**: Entry form submission
 
 #### GET /api/tickets/{ticketNumber}
 - **Purpose**: Retrieve ticket information
 - **Parameters**: ticketNumber in URL path
+- **Response Model**: TicketResponse
 - **Response**: Complete ticket object
 - **Usage**: Ticket lookup on exit
 
 #### PUT /api/tickets/{ticketNumber}/exit
 - **Purpose**: Process vehicle exit and payment
 - **Parameters**: ticketNumber in URL path
+- **Request Model**: ExitRequest
 - **Request Body**: `{ "paymentMethod": "Credit Card" }`
+- **Response Model**: TicketResponse
 - **Response**: Updated ticket with payment information
 - **Usage**: Exit form submission
 
 #### GET /api/activities
 - **Purpose**: List recent parking activities
 - **Query Parameters**: limit (optional, default 10)
+- **Response Model**: List[ActivityResponse]
 - **Response**: Array of ticket/activity objects
 - **Usage**: Activity list on dashboard
 
-### 4.2 Error Handling
+### 4.2 API Documentation
 
-The API implements consistent error handling:
+FastAPI automatically generates API documentation based on the endpoint declarations and schema models:
 
-1. Each endpoint is wrapped in try/except blocks
-2. Errors return appropriate HTTP status codes:
+- **Swagger UI**: Available at `/docs` endpoint
+- **ReDoc**: Available at `/redoc` endpoint
+- **OpenAPI Schema**: Available at `/openapi.json` endpoint
+
+These provide interactive documentation that allows:
+- Exploring all available endpoints
+- Seeing request/response models
+- Testing API calls directly from the browser
+- Understanding validation rules
+
+### 4.3 Error Handling
+
+The API implements consistent error handling with custom exception handlers:
+
+1. HTTPException handling for standard error cases:
    - 400: Bad Request (client error)
    - 404: Not Found
    - 500: Internal Server Error
-3. Error responses include a message field explaining the issue
+
+2. RequestValidationError handling for request validation failures:
+   - Detailed information about validation failures
+   - Clear messages about what fields failed validation and why
+
+3. Error responses include a standardized format:
+   ```json
+   { "message": "Detailed error description" }
+   ```
+
 4. Detailed error logging to the console for debugging
 
 ## 5. Frontend Integration
@@ -317,15 +415,16 @@ The frontend uses React Query for data fetching:
                    │
                    ▼
 ┌─────────────────────────────────────┐
-│ Python Flask Backend                │
+│ Python FastAPI Backend              │
 │  ┌─────────────┐   ┌─────────────┐  │
 │  │ API Routes  │──►│ Controllers │  │
 │  └─────────────┘   └─────────────┘  │
-│                      │              │
-│                      ▼              │
-│  ┌───────────────────────────────┐  │
-│  │ SQLAlchemy Models             │  │
-│  └───────────────────────────────┘  │
+│          │               │          │
+│          ▼               ▼          │
+│  ┌─────────────┐   ┌─────────────┐  │
+│  │ Pydantic    │   │ SQLAlchemy  │  │
+│  │ Schemas     │   │ Models      │  │
+│  └─────────────┘   └─────────────┘  │
 │                  │                  │
 └──────────────────┼──────────────────┘
                    │
@@ -341,9 +440,10 @@ The frontend uses React Query for data fetching:
 
 The development environment runs on a single machine with:
 
-1. **Python Flask Backend**:
+1. **Python FastAPI Backend**:
    - Port: 5001
    - Entry point: `python python_server/run.py`
+   - ASGI Server: Uvicorn
    - Environment variables:
      - DATABASE_URL: PostgreSQL connection string
      - PORT: Server port (default 5001)
@@ -367,8 +467,9 @@ Tests are implemented in `test.py` and validate all API endpoints:
 4. **test_get_ticket()**: Tests ticket retrieval
 5. **test_process_exit()**: Tests exit processing and payment
 6. **test_get_activities()**: Tests activity listing
+7. **test_api_docs()**: Tests FastAPI documentation endpoints (FastAPI-specific)
 
-Tests can be run against either backend by setting the `API_PORT` environment variable.
+Tests can be run against either backend by setting the `API_PORT` environment variable, with enhanced testing for FastAPI-specific features.
 
 ## 7. Production Deployment
 
@@ -382,8 +483,8 @@ This option involves deploying the entire application on a single server:
 ┌─────────────────────────────────────────────────────────┐
 │ EC2 Instance or VM                                      │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
-│  │ Nginx       │──│ Gunicorn    │──│ Flask App   │     │
-│  │ Web Server  │  │ WSGI Server │  │             │     │
+│  │ Nginx       │──│ Uvicorn     │──│ FastAPI App │     │
+│  │ Web Server  │  │ ASGI Server │  │             │     │
 │  └─────────────┘  └─────────────┘  └─────────────┘     │
 │                                        │                │
 │                                        ▼                │
@@ -396,7 +497,7 @@ This option involves deploying the entire application on a single server:
 **Steps:**
 1. Provision an AWS EC2 instance (t3.small or larger)
 2. Install Nginx as a reverse proxy
-3. Set up Gunicorn as a WSGI server
+3. Set up Uvicorn as an ASGI server
 4. Configure PostgreSQL database
 5. Set up systemd service for application management
 6. Install SSL certificate (via Let's Encrypt)
@@ -415,7 +516,7 @@ This option uses Docker and potentially Kubernetes for a more scalable deploymen
 ┌────────────────────────────────────────────────────────────────┐
 │ Kubernetes Cluster                                             │
 │  ┌─────────────┐   ┌─────────────────────────────────────┐    │
-│  │ Ingress     │──►│ Flask App Pods (Multiple Replicas)  │    │
+│  │ Ingress     │──►│ FastAPI App Pods (Multiple Replicas)│    │
 │  │ Controller  │   └─────────────────────────────────────┘    │
 │  └─────────────┘                     │                         │
 │                                      ▼                         │
@@ -442,7 +543,7 @@ This option uses Docker and potentially Kubernetes for a more scalable deploymen
 ### 7.2 Production Configuration Checklist
 
 1. **Security:**
-   - Disable Flask debug mode
+   - Configure proper CORS settings
    - Set secure HTTP headers
    - Implement rate limiting
    - Use HTTPS only
@@ -450,9 +551,9 @@ This option uses Docker and potentially Kubernetes for a more scalable deploymen
    - Implement proper authentication (not currently in the code)
 
 2. **Performance:**
-   - Configure proper WSGI server (Gunicorn)
-   - Set appropriate worker processes
-   - Optimize database queries
+   - Configure Uvicorn workers appropriately
+   - Set worker processes based on CPU cores
+   - Optimize database queries with indexes
    - Implement caching for statistics
 
 3. **Monitoring:**
@@ -474,17 +575,30 @@ This option uses Docker and potentially Kubernetes for a more scalable deploymen
 
 ## 8. Design Decisions and Rationale
 
-### 8.1 Python Flask vs. Fast API
+### 8.1 FastAPI vs. Flask
 
-**Decision:** Use Flask instead of FastAPI
+**Decision:** Use FastAPI instead of Flask
 
 **Rationale:**
-- Flask is more established with broader community support
-- Simpler to implement for this use case
-- Lower learning curve for maintenance developers
-- SQLAlchemy integration is more mature
+- Native async/await support for better performance
+- Automatic API documentation with OpenAPI
+- Built-in request validation with Pydantic
+- Type hints for better code quality and tooling
+- More modern framework with higher performance
+- Simpler dependency injection system
 
-### 8.2 SQLAlchemy ORM vs. Raw SQL
+### 8.2 Pydantic for Schema Validation
+
+**Decision:** Use Pydantic models for request/response validation
+
+**Rationale:**
+- Integrates seamlessly with FastAPI
+- Provides automatic request validation
+- Generates comprehensive API documentation
+- Type hints improve development experience
+- Clear separation between API contract and data model
+
+### 8.3 SQLAlchemy ORM vs. Raw SQL
 
 **Decision:** Use SQLAlchemy ORM for database interactions
 
@@ -494,7 +608,7 @@ This option uses Docker and potentially Kubernetes for a more scalable deploymen
 - Database schema version independence
 - Object-oriented approach matches application structure
 
-### 8.3 Monetary Storage as Integers
+### 8.4 Monetary Storage as Integers
 
 **Decision:** Store monetary values as integers (cents) rather than floats
 
@@ -504,17 +618,17 @@ This option uses Docker and potentially Kubernetes for a more scalable deploymen
 - Consistent with frontend expectations
 - Front-end handles formatting for display
 
-### 8.4 API First Design
+### 8.5 Uvicorn as ASGI Server
 
-**Decision:** Implement API endpoints before integrating frontend
+**Decision:** Use Uvicorn instead of traditional WSGI servers
 
 **Rationale:**
-- Enables independent testing of backend
-- Facilitates parallel development with frontend team
-- Allows for API client flexibility
-- Makes testing simpler
+- Better performance for async applications
+- Native support for FastAPI
+- Designed for modern Python async frameworks
+- Supports HTTP/2 and WebSockets
 
-### 8.5 Dual Backend Implementation
+### 8.6 Dual Backend Implementation
 
 **Decision:** Maintain both TypeScript and Python implementations simultaneously during migration
 
@@ -527,7 +641,7 @@ This option uses Docker and potentially Kubernetes for a more scalable deploymen
 ## 9. Future Enhancements
 
 1. **Authentication and Authorization:**
-   - Implement user login for staff
+   - Implement OAuth2 authentication using FastAPI's built-in security utilities
    - Role-based access control
    - Audit logging for all operations
 
@@ -545,15 +659,16 @@ This option uses Docker and potentially Kubernetes for a more scalable deploymen
    - Exportable reports (CSV, PDF)
 
 4. **Technical Improvements:**
-   - Implement caching for better performance
-   - Add comprehensive unit tests
-   - Create API documentation with Swagger/OpenAPI
-   - Implement database migrations tool
+   - Implement FastAPI dependency injection for better code organization
+   - Add background tasks for non-critical operations
+   - Implement caching using FastAPI middleware
+   - Add comprehensive unit tests with pytest
+   - Use Alembic for database migrations
 
 ## 10. Conclusion
 
-The Parking Garage Management System is a full-stack web application with a Python Flask backend and React frontend. The system provides a complete solution for managing parking operations, including ticket issuance, payment processing, and statistical monitoring.
+The Parking Garage Management System is a full-stack web application with a Python FastAPI backend and React frontend. The system provides a complete solution for managing parking operations, including ticket issuance, payment processing, and statistical monitoring.
 
-The Python backend implementation follows best practices for web application development with clear separation of concerns, maintainable code structure, and robust error handling. The system is designed to be deployable in various environments from simple single-server setups to containerized cloud deployments.
+The FastAPI backend implementation follows modern best practices for web API development with automatic documentation, strong typing, data validation, and asynchronous request handling. The system is designed to be deployable in various environments from simple single-server setups to containerized cloud deployments, with excellent performance characteristics and a robust architecture.
 
 This design document provides a comprehensive overview of the system architecture, components, and implementation details to facilitate understanding, maintenance, and future development of the application.

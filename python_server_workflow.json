@@ -1,6 +1,12 @@
 {
-  "name": "Start Python Server",
-  "run": "cd python_server && python run.py",
-  "author": "agent",
-  "description": "Run the Python backend server on port 5001"
+  "workflows": [
+    {
+      "name": "Start FastAPI server",
+      "command": "cd python_server && python run.py",
+      "triggers": [
+        "workspace.onOpen",
+        "workflow.onRestart"
+      ]
+    }
+  ]
 }

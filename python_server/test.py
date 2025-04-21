@@ -15,6 +15,7 @@ def test_api_connection():
         assert response.status_code == 200
         assert response.json()['status'] == 'ok'
         print(f"✓ API Connection Test Successful at {api_url}")
+        print(f"  Running with FastAPI: {API_PORT == '5001'}")
         return True
     except Exception as e:
         print(f"✗ API Connection Test Failed: {e}")
@@ -107,9 +108,29 @@ def test_get_activities():
         print(f"✗ Get Activities Test Failed: {e}")
         return False
 
+def test_api_docs():
+    """Test accessing API documentation (FastAPI specific)."""
+    if API_PORT == '5001':  # Only test for FastAPI
+        try:
+            # Test OpenAPI docs endpoints
+            docs_response = requests.get(f'http://localhost:{API_PORT}/docs')
+            assert docs_response.status_code == 200
+            
+            openapi_response = requests.get(f'http://localhost:{API_PORT}/openapi.json')
+            assert openapi_response.status_code == 200
+            
+            print("✓ API Documentation Test Successful")
+            print("  Swagger UI and OpenAPI schema available")
+            return True
+        except Exception as e:
+            print(f"✗ API Documentation Test Failed: {e}")
+            return False
+    return None  # Skip for non-FastAPI
+
 def run_all_tests():
     """Run all API tests sequentially."""
     print(f"\n=== Running API Tests on port {API_PORT} ===\n")
+    print(f"Backend: {'FastAPI' if API_PORT == '5001' else 'Express.js'}")
     
     # Test API connection
     if not test_api_connection():
@@ -127,6 +148,10 @@ def run_all_tests():
     
     # Test activities
     test_get_activities()
+    
+    # Test FastAPI-specific features
+    if API_PORT == '5001':
+        test_api_docs()
     
     print(f"\n=== API Tests Complete (port {API_PORT}) ===\n")
 
