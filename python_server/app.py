@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Request, status
+from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,6 +23,7 @@ from schemas import (
 import uvicorn
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.exceptions import RequestValidationError
+from starlette import status
 
 # Load environment variables
 load_dotenv()
@@ -78,7 +79,7 @@ except:
 
 # API endpoints
 @app.get("/api/status", response_model=StatusResponse)
-async def status():
+async def get_status():
     return {"status": "ok"}
 
 @app.get("/api/garage/stats", response_model=GarageStatsResponse)
