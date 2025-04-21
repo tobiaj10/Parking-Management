@@ -3,6 +3,8 @@ import {
   tickets, type Ticket, type InsertTicket, type UpdateTicket,
   garageSettings, type GarageSettings, type InsertGarageSettings
 } from "@shared/schema";
+import { db } from './db';
+import { eq, desc, and, gte, sql } from 'drizzle-orm';
 
 // Interface for storage operations
 export interface IStorage {
@@ -30,154 +32,164 @@ export interface IStorage {
   getAverageStayTime(): Promise<number>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private tickets: Map<number, Ticket>;
-  private settings: GarageSettings | undefined;
-  private currentUserId: number;
-  private currentTicketId: number;
-  private currentSettingsId: number;
-
+export class DatabaseStorage implements IStorage {
+  // Initialize with default settings if needed
   constructor() {
-    this.users = new Map();
-    this.tickets = new Map();
-    this.currentUserId = 1;
-    this.currentTicketId = 1;
-    this.currentSettingsId = 1;
-    
-    // Initialize with default garage settings
-    this.settings = {
-      id: this.currentSettingsId,
-      totalSpaces: 140,
-      hourlyRate: 1000 // $10.00 in cents
-    };
+    // Ensure default garage settings exist
+    this.initializeDefaultSettings();
+  }
+
+  // Initialize default garage settings if none exist
+  private async initializeDefaultSettings(): Promise<void> {
+    const settings = await this.getGarageSettings();
+    if (!settings) {
+      await this.createOrUpdateGarageSettings({
+        totalSpaces: 140,
+        hourlyRate: 1000 // $10 in cents
+      });
+    }
   }
 
   // User operations
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
   // Ticket operations
   async getTicket(id: number): Promise<Ticket | undefined> {
-    return this.tickets.get(id);
+    const [ticket] = await db.select().from(tickets).where(eq(tickets.id, id));
+    return ticket;
   }
 
   async getTicketByNumber(ticketNumber: string): Promise<Ticket | undefined> {
-    return Array.from(this.tickets.values()).find(
-      (ticket) => ticket.ticketNumber === ticketNumber
-    );
+    const [ticket] = await db.select().from(tickets).where(eq(tickets.ticketNumber, ticketNumber));
+    return ticket;
   }
 
   async createTicket(insertTicket: InsertTicket): Promise<Ticket> {
-    const id = this.currentTicketId++;
-    const ticket: Ticket = { 
-      ...insertTicket, 
-      id,
-      exitTime: null,
-      durationMinutes: null,
-      amountPaid: null,
-      paymentMethod: null
+    // The actual insertTicket schema only includes licensePlate and vehicleType
+    // We need to add the additional fields before inserting
+    const ticketToInsert = {
+      ...insertTicket,
+      ticketNumber: `PS-${Math.floor(1000 + Math.random() * 9000)}`,
+      entryTime: new Date(),
+      status: 'active'
     };
-    this.tickets.set(id, ticket);
+    
+    const [ticket] = await db.insert(tickets).values(ticketToInsert).returning();
     return ticket;
   }
 
   async updateTicket(id: number, updateData: UpdateTicket): Promise<Ticket | undefined> {
-    const ticket = this.tickets.get(id);
-    if (!ticket) return undefined;
+    const [updatedTicket] = await db
+      .update(tickets)
+      .set(updateData)
+      .where(eq(tickets.id, id))
+      .returning();
     
-    const updatedTicket: Ticket = { ...ticket, ...updateData };
-    this.tickets.set(id, updatedTicket);
     return updatedTicket;
   }
 
   async getActiveTickets(): Promise<Ticket[]> {
-    return Array.from(this.tickets.values()).filter(
-      (ticket) => ticket.status === 'active'
-    );
+    return db.select().from(tickets).where(eq(tickets.status, 'active'));
   }
 
   async getRecentTickets(limit: number): Promise<Ticket[]> {
-    return Array.from(this.tickets.values())
-      .sort((a, b) => {
-        const aTime = a.exitTime || a.entryTime;
-        const bTime = b.exitTime || b.entryTime;
-        return bTime.getTime() - aTime.getTime();
-      })
-      .slice(0, limit);
+    return db
+      .select()
+      .from(tickets)
+      .orderBy(desc(tickets.entryTime))
+      .limit(limit);
   }
 
   // Garage settings operations
   async getGarageSettings(): Promise<GarageSettings | undefined> {
-    return this.settings;
+    const [settings] = await db.select().from(garageSettings);
+    return settings;
   }
 
   async createOrUpdateGarageSettings(settings: InsertGarageSettings): Promise<GarageSettings> {
-    this.settings = { 
-      ...settings, 
-      id: this.currentSettingsId
-    };
-    return this.settings;
+    const existingSettings = await this.getGarageSettings();
+    
+    if (existingSettings) {
+      // Update existing settings
+      const [updatedSettings] = await db
+        .update(garageSettings)
+        .set(settings)
+        .where(eq(garageSettings.id, existingSettings.id))
+        .returning();
+      
+      return updatedSettings;
+    } else {
+      // Create new settings
+      const [newSettings] = await db
+        .insert(garageSettings)
+        .values(settings)
+        .returning();
+      
+      return newSettings;
+    }
   }
 
   // Stats operations
   async getOccupiedSpacesCount(): Promise<number> {
-    return (await this.getActiveTickets()).length;
+    const activeTickets = await this.getActiveTickets();
+    return activeTickets.length;
   }
 
   async getTodayRevenue(): Promise<number> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    return Array.from(this.tickets.values())
-      .filter(ticket => {
-        if (!ticket.exitTime || !ticket.amountPaid) return false;
-        const exitDate = new Date(ticket.exitTime);
-        return exitDate >= today;
-      })
-      .reduce((sum, ticket) => sum + (ticket.amountPaid || 0), 0);
+    const result = await db
+      .select({ sum: sql<number>`COALESCE(sum(${tickets.amountPaid}), 0)` })
+      .from(tickets)
+      .where(
+        and(
+          eq(tickets.status, 'completed'),
+          gte(tickets.exitTime, today)
+        )
+      );
+    
+    return result[0]?.sum || 0;
   }
 
   async getVehiclesProcessedToday(): Promise<number> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    return Array.from(this.tickets.values())
-      .filter(ticket => {
-        if (!ticket.exitTime) return false;
-        const exitDate = new Date(ticket.exitTime);
-        return exitDate >= today;
-      })
-      .length;
+    const processed = await db
+      .select()
+      .from(tickets)
+      .where(
+        and(
+          eq(tickets.status, 'completed'),
+          gte(tickets.exitTime, today)
+        )
+      );
+    
+    return processed.length;
   }
 
   async getAverageStayTime(): Promise<number> {
-    const completedTickets = Array.from(this.tickets.values())
-      .filter(ticket => ticket.status === 'completed' && ticket.durationMinutes);
+    const result = await db
+      .select({ avg: sql<number>`COALESCE(avg(${tickets.durationMinutes}), 0)` })
+      .from(tickets)
+      .where(eq(tickets.status, 'completed'));
     
-    if (completedTickets.length === 0) return 0;
-    
-    const totalMinutes = completedTickets.reduce(
-      (sum, ticket) => sum + (ticket.durationMinutes || 0), 
-      0
-    );
-    
-    return totalMinutes / completedTickets.length;
+    return Math.round(result[0]?.avg || 0);
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

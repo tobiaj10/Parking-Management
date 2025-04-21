@@ -56,17 +56,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const data = insertTicketSchema.parse(req.body);
       
-      // Generate ticket number with PS prefix
-      const ticketNumber = `PS-${Math.floor(1000 + Math.random() * 9000)}`;
-      
-      const newTicket: InsertTicket = {
-        ...data,
-        ticketNumber,
-        entryTime: new Date(),
-        status: 'active'
-      };
-
-      const ticket = await storage.createTicket(newTicket);
+      // The database adapter will handle generating the ticket number and other fields
+      const ticket = await storage.createTicket(data);
       res.status(201).json(ticket);
     } catch (err) {
       if (err instanceof ZodError) {
