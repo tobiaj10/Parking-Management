@@ -638,7 +638,54 @@ This option uses Docker and potentially Kubernetes for a more scalable deploymen
 - Provides fallback if issues arise
 - Allows gradual transition without service disruption
 
-## 9. Future Enhancements
+## 9. Deployment and Portability
+
+The system supports multiple deployment options for different environments.
+
+### 9.1 Deployment Options
+
+1. **Replit Environment**
+   - Utilizes `.replit` configuration
+   - Workflows defined in Replit interface
+   - Automatic environment setup
+
+2. **Local Development with Make**
+   - Makefile included for common operations
+   - Cross-platform support with conditional commands
+   - Unified command interface
+   - See `make help` for available commands
+
+3. **Containerized with Docker**
+   - Complete docker-compose setup
+   - Separate containers for PostgreSQL, Node.js, and Python services
+   - Volume persistence for database
+   - Environment variable configuration
+
+### 9.2 Docker Configuration
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│                 │     │                 │     │                 │
+│  Node Container │ ◄───┤  Python Container│ ◄───┤   PostgreSQL   │
+│    (Port 5000)  │     │    (Port 5001)  │     │  (Port 5432)   │
+│                 │     │                 │     │                 │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+         │                      │                      │
+         ▼                      ▼                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Docker Network                             │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+The Docker setup includes:
+- **Dockerfile.node**: Node.js backend container
+- **Dockerfile.python**: Python/FastAPI backend container  
+- **docker-compose.yml**: Service orchestration and networking
+- **.dockerignore**: Optimized Docker builds
+
+For complete setup instructions, see the [PORTABILITY.md](PORTABILITY.md) document.
+
+## 10. Future Enhancements
 
 1. **Authentication and Authorization:**
    - Implement OAuth2 authentication using FastAPI's built-in security utilities
@@ -665,7 +712,7 @@ This option uses Docker and potentially Kubernetes for a more scalable deploymen
    - Add comprehensive unit tests with pytest
    - Use Alembic for database migrations
 
-## 10. Conclusion
+## 11. Conclusion
 
 The Parking Garage Management System is a full-stack web application with a Python FastAPI backend and React frontend. The system provides a complete solution for managing parking operations, including ticket issuance, payment processing, and statistical monitoring.
 

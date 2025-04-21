@@ -55,6 +55,36 @@ cd python_server
 python run.py  # Runs on port 5001
 ```
 
+### Cross-Platform & Deployment Options
+
+The system now supports multiple deployment options for different environments:
+
+#### Make Commands (Added)
+```bash
+# Start TypeScript/Node.js backend
+make dev-ts
+
+# Start Python/FastAPI backend
+make dev-py
+
+# Start both backends
+make dev
+
+# Run Python tests
+make test-py
+```
+
+#### Docker Containers (Added)
+```bash
+# Start everything (PostgreSQL, Node.js, Python backends)
+docker-compose up
+
+# Start only the Python backend
+docker-compose up python-backend
+```
+
+See [PORTABILITY.md](PORTABILITY.md) for complete deployment instructions.
+
 ## Migration Plan
 
 ### Remaining Tasks
