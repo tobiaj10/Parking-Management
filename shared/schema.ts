@@ -30,11 +30,8 @@ export const tickets = pgTable("tickets", {
 
 export const insertTicketSchema = createInsertSchema(tickets)
   .pick({
-    ticketNumber: true,
     licensePlate: true,
     vehicleType: true,
-    entryTime: true,
-    status: true,
   })
   .extend({
     licensePlate: z.string().min(1, "License plate is required"),
